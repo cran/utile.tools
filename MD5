@@ -1,0 +1,17 @@
+422b32af6b9f0f54d41eb5ae6f5bbe35 *DESCRIPTION
+05e4850dbe6cd27ccd96108d3905d924 *NAMESPACE
+011d0b2ac8d45e9fc1e3f1e12f133d37 *R/calc.R
+a3227c1aa2ac1a4c507fa542a4efa154 *R/paste.R
+cf21a149705a7df6dcbd1f1430e130d0 *R/tabulate.R
+e1ac3655b7c791fd6410aacb96c3ad49 *R/test.R
+08ea4b4c69e599e5ab42b69f6b3c9c8a *README.md
+e2bd9ed910cce216bc6420812900e915 *man/calc_duration.Rd
+389bf5de19ac352c7901949a215864df *man/paste_efs.Rd
+e1011f5054bb3c6044dc68f3880e3230 *man/paste_freq.Rd
+26724f759a814917fbb179462eae0ad4 *man/paste_mean.Rd
+0f149c1fe8eb7bef213e40ef617c15d8 *man/paste_median.Rd
+8876a2ccf8df7bd629d4ae6b0fbcafc7 *man/tabulate_at_risk.Rd
+504553ded52ce688b3a490b821b660f7 *man/tabulate_logit.Rd
+3ef816d470e92f7591925c65e4d4a2ff *man/tabulate_model.Rd
+e86e13701a0115db4063f985109352b9 *man/test_factor.Rd
+dfad92e0166f18a0cdd576749db037f4 *man/test_numeric.Rd
