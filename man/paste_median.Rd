@@ -2,9 +2,9 @@
 % Please edit documentation in R/paste.R
 \name{paste_median}
 \alias{paste_median}
-\title{paste_median}
+\title{Paste Median}
 \usage{
-paste_median(col = NULL, less.than.one = FALSE, digits = 1)
+paste_median(col = NA, less.than.one = FALSE, digits = 1)
 }
 \arguments{
 \item{col}{Required. Vector/Column (numeric). Data to summarize.}

@@ -2,18 +2,34 @@
 % Please edit documentation in R/calc.R
 \name{calc_duration}
 \alias{calc_duration}
-\title{calc_duration}
+\title{Calculate Duration}
 \usage{
-calc_duration(start = NULL, end = NULL, units = "years")
+calc_duration(start = NA, end = NA, units = "years")
 }
 \arguments{
-\item{start}{Required. Date or Timestamp. The start date.}
+\item{start}{Required. Date or POSIXt object. The start date/timestamp.}
 
-\item{end}{Required. Date or Timestamp. The end date.}
+\item{end}{Required. Date or POSIXt object. The end date/timestamp.}
 
 \item{units}{Optional. Character. Units of the returned duration
 (i.e. 'seconds', 'days', 'years'). Defaults to 'years'.}
 }
 \description{
 Returns the duration of time between two provided date objects.
+Supports vectorized data (i.e. dplyr::mutate()).
+}
+\examples{
+# Timestamps
+calc_duration(
+   start = as.POSIXct('01/01/1999 10:00', format = '\%m/\%d/\%Y \%H:\%M'),
+   end = as.POSIXct('01/01/2001 00:00', format = '\%m/\%d/\%Y \%H:\%M'),
+   units = 'days'
+)
+
+# Dates
+calc_duration(
+   start = as.Date('01/01/1999', format = '\%m/\%d/\%Y'),
+   end = as.Date('01/01/2001', format = '\%m/\%d/\%Y'),
+   units = 'years'
+)
 }

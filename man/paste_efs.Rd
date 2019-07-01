@@ -2,9 +2,9 @@
 % Please edit documentation in R/paste.R
 \name{paste_efs}
 \alias{paste_efs}
-\title{paste_efs}
+\title{Paste Event-Free-Survival}
 \usage{
-paste_efs(fit = NULL, time = NULL, percent.sign = TRUE, digits = 1)
+paste_efs(fit = NA, time = NA, percent.sign = TRUE, digits = 1)
 }
 \arguments{
 \item{fit}{Required. survival::Surv() object. The time-to-event model of interest.}
@@ -24,5 +24,5 @@ and a specified time point.
 \examples{
 library(survival)
 fit <- survfit(Surv(time, status) ~ 1, data = diabetic)
-paste_efs(fit, 6)
+paste_efs(fit, c(1, 3, 5))
 }

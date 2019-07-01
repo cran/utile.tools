@@ -1,100 +1,33 @@
-utils::globalVariables(c('n.risk'))
-
-#' @title tabulate_model
-#' @description Returns tabulated data from a model object. Useful for
-#' graphing a fit or creating a useable coefficient table.
-#' @param fit Required. survival::survfit() or survival::coxph() objects.
-#' @param ... Optional. Miscellaneous parameters. Currently, only digits
-#' and p.digits are used right now in the coxph method.
-#' @return Returns tibble containing:
-#'   \item{survfit()}{Graphable survival fit data for use
-#'   in graphing packages.}
-#'   \item{coxph()}{Organized parameters, levels, HR, intervals, and tests.}
-#' @note survfit() methods adapted by the 'survminer' package function
-#' surv_summary() [GLP-2].
-#' @examples
-#' library(dplyr)
-#' library(survival)
-#'
-#' data_cgd <- as_tibble(cgd)
-#'
-#' # Survfit Object
-#' tabulate_model(survfit(Surv(tstart, tstop, status) ~ sex, data = data_cgd))
-#'
-#' # Coxph Object
-#' tabulate_model(coxph(Surv(tstart, tstop, status) ~ age + center + sex, data = data_cgd))
+#' @title Tabulate Model
+#' @description Converts parameters from a model object into a usable
+#' table for publication purposes. By default, formats the table into
+#' a human-readable/exportable form.
+#' @param fit Required. Model object. See S3 methods below.
+#' @param format Optional. Logical. Rounds numbers and formats text for a
+#' cleaner, readable output. Defaults to TRUE.
+#' @param percent.sign Optional. Logical. Indicates percent sign should be printed
+#' for frequencies. Defaults to TRUE.
+#' @param digits Optional. Integer. Number of digits to round to. Defaults to 1.
+#' @param p.digits Optional. Integer. Number of p-value digits to print. Note that
+#' p-values are still rounded using 'digits'. Defaults to 4.
+#' @return Returns tibble containing summarizing statistics and tests.
+#' @seealso
+#' \code{\link{tabulate_model.lm}}
+#' \code{\link{tabulate_model.coxph}}
+#' \code{\link{tabulate_model.glm}}
 #' @export
-tabulate_model <- function(fit, ...) {
+tabulate_model <- function(fit, format, percent.sign, digits, p.digits) {
   UseMethod('tabulate_model')
 }
 
 #' @export
-tabulate_model.default <- function(fit, ...) warning(paste0('Object of class \'', class(fit), '\' not supported.'))
+tabulate_model.default <- function(fit = NULL, format = NULL, percent.sign = NULL, digits = NULL, p.digits = NULL)
+  warning(paste0('Object of class \'', class(fit), '\' not supported.'))
 
-#' @export
-tabulate_model.survfit <- function (fit, ...) {
-
-  # Data preparation
-  data_source <- eval(fit$call$data)
-  data_surv <- dplyr::bind_cols(
-    dplyr::filter_all(
-      .tbl = tibble::as_tibble(unclass(fit)[c("time", "n.risk", "n.event", "n.censor")]),
-      function(x) !is.na(x)
-    ),
-    tibble::as_tibble(unclass(fit)[c('surv', 'upper', 'lower')])
-  )
-
-  # Prepare strata data (if there is any)
-  if (!is.null(fit$strata)) {
-    data_surv$strata <- rep(names(fit$strata), fit$strata)
-    variables <- intersect(
-      unique(
-        purrr::map_chr(
-          data_surv$strata,
-          function (x) {
-            x <- unlist(stringr::str_split(x, '=|,\\s+'))
-            x[seq(1, length(x), 2)]
-          }
-        )
-      ),
-      colnames(data_source)
-    )
-    for (variable in variables) {
-      strata <- purrr::map_chr(
-        data_surv$strata,
-        function(x) {
-          x <- unlist(stringr::str_split(x, "=|(\\s+)?,\\s+"))
-          index <- grep(paste0("^", variable, "$"), x)
-          stringr::str_trim(x[index+1])
-        }
-      )
-      var_levels <- levels(data_source[, variable])
-      if(!is.null(var_levels)) data_surv[[variable]] <- factor(strata, levels = var_levels)
-      else data_surv[[variable]] <- as.factor(strata)
-    }
-  }
-
-  # Connect to origin
-  if("n.risk" %in% colnames(data_surv)) data_surv <- dplyr::arrange(data_surv, dplyr::desc(n.risk))
-  if ('strata' %in% names(data_surv)) origin <- dplyr::distinct(.data = data_surv, strata, .keep_all = TRUE)
-  else origin <- data_surv[1,]
-  origin[intersect(c('time', 'n.censor', 'std.err', "n.event"), colnames(origin))] <- 0
-  origin[c('surv', 'upper', 'lower')] <- 1.0
-  data_surv <- dplyr::bind_rows(origin, data_surv)
-  data_surv
-}
-
-#' @export
-tabulate_model.coxph <- function(fit, ...) {
-
-  digits <- 1
-  p.digits <- 4
-  percent.sign <- TRUE
-  list2env(list(...), envir = environment())
-
-  coeffs <- summary(fit)$coefficients
-  levels <- fit$xlevels
-  tests <- stats::anova(fit)
+.tabulate_model <- function(
+  fit, coefficients, levels,
+  estimate, tests, counts = NA
+) {
 
   # Create and return summary table
   purrr::map2_df(
@@ -109,176 +42,267 @@ tabulate_model.coxph <- function(fit, ...) {
 
         # Reference rows for factor w/ >2 levels
         if (categorical & length(positions) > 1)
-          dplyr::mutate_all(
-            .tbl = tibble::tibble(
-              Variable = parameter,
-              Level = c(NA, levels[[parameter]][1]),
-              `At Risk` = c(fit$n, NA),
-              Events = c(
-                utile.tools::paste_freq(
-                  fit$nevent,
-                  fit$n,
-                  digits = digits,
-                  percent.sign = percent.sign
-                ),
-                NA
+          dplyr::bind_rows(
+            dplyr::bind_cols(
+              variable = parameter,
+              level = NA,
+              if (all(!is.na(counts))) tibble::tibble(
+                subjects = as.integer(counts[1]),
+                events = as.integer(counts[2])
               ),
-              `HR 95%CI` = c(NA, '-ref-'),
-              p = c(
-                format.pval(
-                  pv = tests[parameter, 'Pr(>|Chi|)'],
-                  digits = digits,
-                  eps = 1e-04,
-                  nsmall = p.digits,
-                  scientific = F
-                ),
-                NA
-              )
+              p = as.double(tests[parameter, 1])
             ),
-            as.character
+            dplyr::bind_cols(
+              variable = parameter,
+              level = levels[[parameter]][1]
+            )
           ),
 
         # Create row(s) for each parameter/level
         purrr::imap_dfr(
           positions,
           function(position, index) {
-            row <- coeffs[position,]
-            hr <- if (!is.na(row['exp(coef)'])) round(row['exp(coef)'], digits = digits) else NA
-            lower <-
-              if (!any(is.na(c(row['coef'], row['se(coef)']))))
-                round(exp(row['coef'] - (1.95 * row['se(coef)'])), digits = digits)
-              else NA
-            upper <-
-              if (!any(is.na(c(row['coef'], row['se(coef)']))))
-                round(exp(row['coef'] + (1.95 * row['se(coef)'])), digits = digits)
-              else NA
-
-            dplyr::mutate_all(
-              .tbl = tibble::tibble(
-                Variable = parameter,
-                Level = if (categorical) levels[[parameter]][index + 1] else NA,
-                `At Risk` = if (length(positions) == 1) fit$n else NA,
-                Events =
-                  if (length(positions) == 1)
-                    utile.tools::paste_freq(
-                      fit$nevent,
-                      fit$n,
-                      digits = digits,
-                      percent.sign = percent.sign
-                    )
-                  else NA,
-                `HR 95%CI` =
-                  if (!any(is.na(c(hr, lower, upper))))
-                    paste0(hr, ' [', lower, '-', upper, ']')
-                  else NA,
-                p =
-                  if (!is.na(row['Pr(>|z|)']))
-                    format.pval(
-                      pv = row['Pr(>|z|)'],
-                      digits = digits,
-                      eps = 1e-04,
-                      nsmall = p.digits,
-                      scientific = F
-                    )
+            row <- coefficients[position,]
+            dplyr::bind_cols(
+              variable = as.character(parameter),
+              level = as.character(if (categorical) levels[[parameter]][index + 1] else NA),
+              if (all(!is.na(counts))) {
+                tibble::tibble(
+                  subjects = as.integer(if (length(positions) == 1) counts[1] else NA),
+                  events = as.integer(if (length(positions) == 1) counts[2] else NA)
+                )
+              },
+              estimate = as.double(if (!is.na(row[1])) estimate(row[1]) else NA),
+              conf.lower = as.double(
+                if (!any(is.na(c(row[1], row[2]))))
+                  estimate(row[1] - (1.95 * row[2]))
                 else NA
               ),
-              as.character
+              conf.upper = as.double(
+                if (!any(is.na(c(row[1], row[2]))))
+                  estimate(row[1] + (1.95 * row[2]))
+                else NA
+              ),
+              p = as.double(
+                if (length(positions) == 1 & !is.na(tests[parameter, 1]))
+                  tests[parameter, 1]
+                else NA
+              )
             )
           }
         )
       )
     }
   )
+
 }
 
+#' @title Tabulate Model: Cox PH
+#' @description Converts parameters from a cox parametric hazards model
+#' into a usable table for publication purposes.
+#' @param fit Required. survival::coxph() object.
+#' @param format Optional. Logical. Rounds numbers and formats text for a
+#' cleaner, readable output. Defaults to TRUE.
+#' @param percent.sign Optional. Logical. Indicates percent sign should be printed
+#' for frequencies. Defaults to TRUE.
+#' @param digits Optional. Integer. Number of digits to round to. Defaults to 1.
+#' @param p.digits Optional. Integer. Number of p-value digits to print. Note that
+#' p-values are still rounded using 'digits'. Defaults to 4.
+#' @seealso \code{\link{tabulate_model}}
+#' @examples
+#' library(tibble)
+#' library(survival)
+#'
+#' # coxph() Object
+#' coxph_data <- as_tibble(cgd)
+#'
+#' tabulate_model(
+#'    fit = coxph(
+#'       Surv(tstart, tstop, status) ~ age + center + sex,
+#'       data = coxph_data
+#'    )
+#'  )
+#' @export
+tabulate_model.coxph <- function(fit, format = TRUE, percent.sign = TRUE, digits = 1, p.digits = 4) {
 
-#' @title tabulate_at_risk
+  # Tabulate
+  res <- .tabulate_model(
+    fit = fit,
+    coefficients = matrix(
+      summary(fit)$coefficients[, c(1, 3)],
+      ncol = 2,
+      dimnames = list(
+        row.names(summary(fit)$coefficients),
+        1:2
+      )
+    ),
+    levels = fit$xlevels,
+    tests = matrix(
+      stats::anova(fit)[-1,4],
+      ncol = 1,
+      dimnames = list(names(fit$assign), c('p'))
+    ),
+    counts = c(fit$n, fit$nevent),
+    estimate = function (x) exp(x)
+  )
+
+  # Return completed table
+  if (format) .format_table(res, estimate = 'HR', percent.sign = percent.sign, digits = digits, p.digits = p.digits)
+  else res
+}
+
+#' @title Tabulate Model: GLM
+#' @description Converts parameters from a generalized linear model into a usable
+#' table for publication purposes.
+#' @param fit Required. MASS::glm(family = 'binomial') object.
+#' @param format Optional. Logical. Rounds numbers and formats text for a
+#' cleaner, readable output. Defaults to TRUE.
+#' @param percent.sign Optional. Logical. Indicates percent sign should be printed
+#' for frequencies. Defaults to TRUE.
+#' @param digits Optional. Integer. Number of digits to round to. Defaults to 1.
+#' @param p.digits Optional. Integer. Number of p-value digits to print. Note that
+#' p-values are still rounded using 'digits'. Defaults to 4.
+#' @seealso \code{\link{tabulate_model}}
+#' @examples
+#' library(dplyr)
+#' library(MASS)
+#'
+#' # glm() Object
+#' logit_data <- MASS::birthwt %>%
+#'   mutate_at(c('race'), as.factor) %>%
+#'   mutate_at(c('low', 'smoke', 'ht', 'ui'), as.logical)
+#
+#' tabulate_model(
+#'   fit = stats::glm(
+#'     low ~ race + smoke + age,
+#'     data = logit_data,
+#'     family = 'binomial'
+#'    )
+#' )
+#' @export
+tabulate_model.glm <- function(fit,  format = TRUE, percent.sign = TRUE, digits = 1, p.digits = 4) {
+
+  # Hard stops
+  if (!(fit$family$family %in% c('binomial'))) stop(paste0('Unsupported GLM family \'', fit$family$family, '\'. See docs.'))
+
+  if (fit$family$family == 'binomial') {
+
+    # Determine Assignments
+    fit$assign <- attr(
+      stats::model.matrix(object = fit$formula, data = fit$data),
+      'assign'
+    )
+    fit$assign <- purrr::map(
+      0:length(all.vars(fit$formula)[-1]),
+      ~ which(.x == fit$assign)
+    )
+    names(fit$assign) <- c('(Intercept)', all.vars(fit$formula)[-1])
+
+    # Tabulate
+    res <- .tabulate_model(
+        fit = fit,
+        coefficients =  matrix(
+          summary(fit)$coefficients[, 1:2],
+          ncol = 2,
+          dimnames = list(
+            row.names(summary(fit)$coefficients),
+            1:2
+          )
+        ),
+        levels = fit$xlevels,
+        tests = matrix(
+          stats::drop1(fit, test="LRT")[,5],
+          ncol = 1,
+          dimnames = list(names(fit$assign), 1)
+        ),
+        counts = c(length(fit$y), sum(fit$y)),
+        estimate = function (x) exp(x)
+      )
+
+    # Return completed table
+    if (format) .format_table(res, estimate = 'OR', percent.sign = percent.sign, digits = digits, p.digits = p.digits)
+    else res
+  }
+}
+
+#' @title Tabulate Model: Linear Regression (LM)
+#' @description Converts parameters from a linear regression model into a usable
+#' table for publication purposes.
+#' @param fit Required. lm() object.
+#' @param format Optional. Logical. Rounds numbers and formats text for a
+#' cleaner, readable output. Defaults to TRUE.
+#' @param percent.sign Optional. Logical. Indicates percent sign should be printed
+#' for frequencies. Defaults to TRUE.
+#' @param digits Optional. Integer. Number of digits to round to. Defaults to 1.
+#' @param p.digits Optional. Integer. Number of p-value digits to print. Note that
+#' p-values are still rounded using 'digits'. Defaults to 4.
+#' @seealso \code{\link{tabulate_model}}
+#' @examples
+#' library(dplyr)
+#'
+#' data_mtcars <- datasets::mtcars %>%
+#'   dplyr::as_tibble() %>%
+#'   dplyr::mutate_at(dplyr::vars('vs', 'am'), as.logical) %>%
+#'   dplyr::mutate_at(dplyr::vars('gear', 'carb', 'cyl'), as.factor)
+#'
+#' tabulate_model(fit = lm(mpg ~ vs + drat + cyl, data = data_mtcars))
+#' @export
+tabulate_model.lm <- function(fit, format = TRUE, percent.sign = TRUE, digits = 1, p.digits = 4) {
+
+  # Determine Assignments
+  fit$assign <- purrr::map(
+    0:length(all.vars(stats::formula(fit))[-1]),
+    ~ which(.x == fit$assign)
+  )
+  names(fit$assign) <- c('(Intercept)', all.vars(stats::formula(fit))[-1])
+
+  # Tabulate
+  res <- .tabulate_model(
+    fit = fit,
+    coefficients =  matrix(
+      summary(fit)$coefficients[, 1:2],
+      ncol = 2,
+      dimnames = list(
+        row.names(summary(fit)$coefficients),
+        1:2
+      )
+    ),
+    levels = fit$xlevels,
+    tests = matrix(
+      stats::drop1(fit, test="Chisq")[,5],
+      ncol = 1,
+      dimnames = list(names(fit$assign), 1)
+    ),
+    estimate = function (x) x
+  )
+
+  # Return completed table
+  if (format) .format_table(res, estimate = 'Estimate', percent.sign = percent.sign, digits = digits, p.digits = p.digits)
+  else res
+}
+
+#' @title Tabulate At Risk
 #' @description Returns a risk table from a model object and specified time points.
 #' @param fit Required. survival::survfit() object.
 #' @param times Required. Numeric. One or vector of times to calculate for.
 #' @return Tibble risk table.
+#' @examples
+#' library(survival)
+#' fit <- survfit(Surv(time, status) ~ 1, data = diabetic)
+#' tabulate_at_risk(fit, c(1, 3, 5))
 #' @export
 tabulate_at_risk <- function(fit = NULL, times = NULL) {
   fit_summary <- summary(fit, times = times)
-  data_risk <- tibble::tibble(
-    strata =
+  tibble::tibble(
+    strata = as.factor(
       if (is.null(fit$strata)) 'All'
-      else {
+      else
         purrr::map_chr(
           fit_summary$strata,
           function(x) stringr::str_split(x, '=')[[1]][2]
         )
-      },
+    ),
     time = fit_summary$time,
     n.risk = fit_summary$n.risk,
-  )
-  data_risk
-}
-
-
-#' @title tabulate_logit
-#' @description Legacy function. Returns list of summary statistics from
-#' data for a logistic regression model. Functionality will eventually be replicated
-#' by tabulate_model().
-#' @param formula Required. Formula. Y ~ X1 + X2 + X3
-#' @param data Required. Tibble. Data used by the formula.
-#' @return Returns model object containing:
-#'   \item{obsCount}{The model's observation count.}
-#'   \item{paramCount}{The model's parameter count.}
-#'   \item{AIC}{The model's AIC.}
-#'   \item{AICc}{The model's AICc.}
-#'   \item{parameters}{A data.frame (tibble) of the model's estimated parameter coefficients.}
-#'   \item{ORs}{A data.frame (tibble) of model parameters' odds ratios and confidence intervals calculated using Likelihood Ratio Tests.}
-#'   \item{LRTs}{A data.frame (tibble) of Likelihood Ratio Test results for each model parameter.}
-#'   \item{model}{The logistical regression model object.}
-#' @export
-tabulate_logit <- function(formula = NULL, data = NULL) {
-  if (is.null(formula) | is.null(data))
-    stop('Parameter missing. Take a look at \'forumla\' and \'data\'.')
-  regression <- stats::glm(formula, data = data, family = 'binomial')
-  AIC <- as.numeric(regression$aic)
-  sampleSize <- as.numeric(length(regression[['fitted.values']]))
-  parameterCount <- as.numeric(length(regression$coefficients))
-  terms <- all.vars(regression$formula)
-  terms[1] <- '(Intercept)'
-  outcomes <- tibble::as.tibble(list(actual = regression$y, predicted = round(regression$fitted, 2)))
-
-  list(
-    obsCount = sampleSize,
-    paramCount = parameterCount,
-    AIC = AIC,
-    AICc = AIC + (((2 * (parameterCount^2)) + (2 * parameterCount))/(sampleSize - parameterCount - 1)),
-    parameters = tibble::add_column(
-      .data = dplyr::select(
-        .data = tibble::as.tibble(summary(regression)$coefficients),
-        -dplyr::one_of(c('Std. Error', 'z value', 'Pr(>|z|)'))
-      ),
-      'Coefficients' = names(regression$coefficients),
-      .before=1
-    ),
-    ORs = tibble::add_column(
-      .data = tibble::as.tibble(
-        exp(
-          cbind(
-            oddsRatio = stats::coef(regression),
-            stats::confint(regression)
-          )
-        )
-      ),
-      'Coefficient' = names(regression$coefficients),
-      .before=1
-    ),
-    LRTs = dplyr::slice(
-      .data = tibble::add_column(
-        .data = dplyr::select(
-          .data = tibble::as.tibble(stats::drop1(regression, test="LRT")),
-          -dplyr::one_of(c('Df', 'Deviance', 'AIC'))
-        ),
-        'Coefficient' = terms,
-        .before=1
-      ),
-      -1
-    ),
-    model <- regression
   )
 }

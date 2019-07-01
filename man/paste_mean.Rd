@@ -2,9 +2,9 @@
 % Please edit documentation in R/paste.R
 \name{paste_mean}
 \alias{paste_mean}
-\title{paste_mean}
+\title{Paste Mean}
 \usage{
-paste_mean(col = NULL, less.than.one = FALSE, digits = 1)
+paste_mean(col = NA, less.than.one = FALSE, digits = 1)
 }
 \arguments{
 \item{col}{Required. Vector/Column (numeric). Data to summarize.}

@@ -2,9 +2,9 @@
 % Please edit documentation in R/paste.R
 \name{paste_freq}
 \alias{paste_freq}
-\title{paste_freq}
+\title{Paste Frequency}
 \usage{
-paste_freq(count, total, percent.sign, remove.na, digits)
+paste_freq(count = NA, total = NA, percent.sign = TRUE, digits = 1)
 }
 \arguments{
 \item{count}{Required. Tibble, Column (logical), or Numeric. The numerator.
@@ -16,29 +16,17 @@ and columns are automatically tallied (nrow or sum(na.rm = TRUE)).}
 \item{percent.sign}{Optional. Logical. Indicates percent sign should be printed
 for frequencies. Defaults to TRUE.}
 
-\item{remove.na}{Optional. Logical. Remove NA from denominator in frequency calculation.
-Defaults to TRUE.}
-
 \item{digits}{Optional. Integer. Number of digits to round to. Defaults to 1.}
 }
 \description{
-Returns a human-readable frequency from count(able) data. Handily
-has methods for several types of data.
+Returns a human-readable frequency from count(able) data. Supports
+vectorized data (i.e. dplyr::mutate()).
 }
 \examples{
 library(tibble)
 
 # Numeric
 paste_freq(20, 100)
-
-# Logical
-data_logical <- tribble(
-  ~numerator, ~denomenator,
-  TRUE, TRUE,
-  FALSE, TRUE,
-  FALSE, TRUE
-)
-paste_freq(data_logical$numerator, data_logical$denomenator)
 
 # Tibble
 data_tibble <- tibble(column = c(1:100))

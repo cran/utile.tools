@@ -2,7 +2,7 @@
 % Please edit documentation in R/tabulate.R
 \name{tabulate_at_risk}
 \alias{tabulate_at_risk}
-\title{tabulate_at_risk}
+\title{Tabulate At Risk}
 \usage{
 tabulate_at_risk(fit = NULL, times = NULL)
 }
@@ -16,4 +16,9 @@ Tibble risk table.
 }
 \description{
 Returns a risk table from a model object and specified time points.
+}
+\examples{
+library(survival)
+fit <- survfit(Surv(time, status) ~ 1, data = diabetic)
+tabulate_at_risk(fit, c(1, 3, 5))
 }

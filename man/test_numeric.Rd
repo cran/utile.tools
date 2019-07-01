@@ -2,7 +2,7 @@
 % Please edit documentation in R/test.R
 \name{test_numeric}
 \alias{test_numeric}
-\title{test_numeric}
+\title{Test Numeric Data}
 \usage{
 test_numeric(col = NULL, by = ".by", data = NULL,
   parametric = FALSE, digits = 1, p.digits = 4)
@@ -20,7 +20,7 @@ test_numeric(col = NULL, by = ".by", data = NULL,
 \item{digits}{Optional. Integer. Number of digits to round to. Defaults to 1.}
 
 \item{p.digits}{Optional. Integer. Number of p-value digits to print. Note that
-p-values are still rounded using \'digits\'. Defaults to 4.}
+p-values are still rounded using 'digits'. Defaults to 4.}
 }
 \description{
 Returns p-value from parametric or non-parametric testing of stratified
