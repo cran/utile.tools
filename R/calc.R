@@ -5,6 +5,9 @@
 #' @param end Required. Date or POSIXt object. The end date/timestamp.
 #' @param units Optional. Character. Units of the returned duration
 #' (i.e. 'seconds', 'days', 'years'). Defaults to 'years'.
+#' @note Supports multiple calculations against a single time point (i.e.
+#' multiple start dates with a single end date). Note that start and end
+#' must otherwise be of the same length.
 #' @examples
 #' # Timestamps
 #' calc_duration(
@@ -22,7 +25,7 @@
 #' @export
 calc_duration <- function(start = NA, end = NA, units = 'years') {
 
-  # Hard Stop
+  # Hard Stops
   if (
     !(
       all(lubridate::is.Date(start), na.rm = TRUE) |
@@ -35,7 +38,12 @@ calc_duration <- function(start = NA, end = NA, units = 'years') {
       all(is.na(end))
     )
   ) stop('Missing Date or POSIXt object. Check: [\'start\', \'end\']')
-  if (length(start) != length(end)) stop('Provided data are not of the same length. Check [\'start\', \'end\']')
+  if (length(start) != length(end) & all(length(start) > 1, length(end) > 1))
+    stop('Provided data are not of the same length. Check [\'start\', \'end\']')
+
+  # Handle multiple calculations off single timepoint
+  if (length(start) == 1 & length(end) > 1) start <- rep(start, times = length(end))
+  if (length(end) == 1 & length(start) > 1) end <- rep(end, times = length(start))
 
   # Ignore timestamp if one variable is a Date object
   if (all(lubridate::is.Date(end), na.rm = TRUE) & all(lubridate::is.POSIXt(start), na.rm = TRUE))

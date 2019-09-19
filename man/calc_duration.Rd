@@ -18,6 +18,11 @@ calc_duration(start = NA, end = NA, units = "years")
 Returns the duration of time between two provided date objects.
 Supports vectorized data (i.e. dplyr::mutate()).
 }
+\note{
+Supports multiple calculations against a single time point (i.e.
+multiple start dates with a single end date). Note that start and end
+must otherwise be of the same length.
+}
 \examples{
 # Timestamps
 calc_duration(

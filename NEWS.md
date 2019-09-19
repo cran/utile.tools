@@ -1,3 +1,6 @@
+# utile.tools 0.2.1
+* `calc_duration()`: Added support for multiple calculations against a single timepoint.
+
 # utile.tools 0.2.0
 * `tabulate_model()`: Rethought the purpose of this function.
   - Added `format=` option to return a human-readable, ready-to-export table.
