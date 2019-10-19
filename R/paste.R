@@ -1,10 +1,10 @@
 #' @title Paste Frequency
 #' @description Returns a human-readable frequency from count(able) data. Supports
 #' vectorized data (i.e. dplyr::mutate()).
-#' @param count Required. Tibble, Column (logical), or Numeric. The numerator.
-#' Tibbles and columns are automatically tallied (nrow or sum(na.rm = TRUE)).
-#' @param total Required. Tibble, Column, or Numeric. The denominator. Tibbles
-#' and columns are automatically tallied (nrow or sum(na.rm = TRUE)).
+#' @param count Optional. Tibble, Numeric, or Non-Numeric. The numerator.
+#' Tibbles and non-numeric data are automatically tallied (nrow or length).
+#' @param total Optional. Tibble, Numeric, or Non-Numeric. The denominator.
+#' Tibbles and non-numeric data are automatically tallied (nrow or length).
 #' @param percent.sign Optional. Logical. Indicates percent sign should be printed
 #' for frequencies. Defaults to TRUE.
 #' @param digits Optional. Integer. Number of digits to round to. Defaults to 1.
@@ -21,6 +21,8 @@
 paste_freq <- function(count = NA, total = NA, percent.sign = TRUE, digits = 1) {
   if ('data.frame' %in% class(count)) count <- nrow(count)
   if ('data.frame' %in% class(total)) total <- nrow(total)
+  if (!all(is.numeric(count)) & is.vector(count) & !all(is.na(count))) count <- length(count)
+  if (!all(is.numeric(total)) & is.vector(total) & !all(is.na(count))) total <- length(total)
   purrr::map2_chr(
     count, total,
     function(x, y) {
@@ -43,7 +45,7 @@ paste_freq <- function(count = NA, total = NA, percent.sign = TRUE, digits = 1) 
 #' paste_median(mtcars$mpg)
 #' @export
 paste_median <- function(col = NA, less.than.one = FALSE, digits = 1) {
-  if (all(is.na(col))) NA
+  if (all(is.na(col)) | !all(is.numeric(col))) as.character(NA)
   else {
     col_median <- round(x = stats::median(col, na.rm = TRUE), digits = digits)
     if (round(col_median, digits = digits) == 0 & less.than.one) col_median <- '<1'
@@ -63,7 +65,7 @@ paste_median <- function(col = NA, less.than.one = FALSE, digits = 1) {
 #' paste_mean(mtcars$mpg)
 #' @export
 paste_mean <- function(col = NA, less.than.one = FALSE, digits = 1) {
-  if (all(is.na(col))) NA
+  if (all(is.na(col)) | !all(is.numeric(col))) as.character(NA)
   else {
     col_mean <- round(x = mean(col, na.rm = TRUE), digits = digits)
     if (round(col_mean, digits = digits) == 0 & less.than.one) col.mean <- '<1'
@@ -88,7 +90,7 @@ paste_mean <- function(col = NA, less.than.one = FALSE, digits = 1) {
 #' paste_efs(fit, c(1, 3, 5))
 #' @export
 paste_efs <- function(fit = NA, time = NA, percent.sign = TRUE, digits = 1) {
-  if (all(is.na(time)) | class(fit) != 'survfit') NA
+  if (all(is.na(time)) | class(fit) != 'survfit' | !all(is.numeric(time))) NA
   else {
     results <- summary(fit, times = time)
     estimate <- round(results$surv * 100, digits = digits)

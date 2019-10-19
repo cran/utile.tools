@@ -1,3 +1,9 @@
+# utile.tools 0.2.2
+* Added `calc_chunks()` & `chunk_data_()`. Tools for breaking tibbles, data frames, and vectors into smaller, usable chunks of data.
+* `tabulate_model()`: Formatted tables now combine the point estimate and confidence interval into a single column to be more consistent with the output of `utile.tables::` functions.
+* `paste_freq()`: Non-numeric data is now tallied and documentation has been updated.
+* `paste_mean()`/`paste_median()`/`paste_efs()`: Added checks for numeric data.
+
 # utile.tools 0.2.1
 * `calc_duration()`: Added support for multiple calculations against a single timepoint.
 
@@ -12,13 +18,13 @@
 * `tabulate_at_risk()`: Now returns the strata column as factor instead of character type.
 * `paste_freq()`: Switched from an S3 object to a regular function.
   - Fixed NA handling.
-  - Added support for vectorized data (i.e. dplyr::mutate()).
+  - Added support for vectorized data (i.e. `dplyr::mutate()`).
   - Removed support for logical data. This seemed to be an edge case and was interfering with NA handling. May reconsider in future.
 * `paste_median()`/`paste_mean()`: Fixed logic for returning '<1' if a statistic rounds to 0 and `less.than.one=TRUE`.
 * `calc_duration()`:
   - Fixed NA handling.
   - Added hard stops for data types and vectors lengths.
-  - Improved handling of vectorized data (i.e. dplyr::mutate()).
+  - Improved handling of vectorized data (i.e. `dplyr::mutate()`).
   - Added logic to ignore timestamps if mixed data types given (i.e. start = POSIXt, end = Date).
   - Removed rounding of negative numbers to 0.
 
