@@ -1,13 +1,15 @@
 #' @title Test the null hypothesis
-#' @description Returns a p-value from parametric or non-parametric testing of the
+#' @description
+#' Produces a p-value from parametric or non-parametric testing of the
 #' null hypothesis for stratified data.
 #' @param x Required. Numeric or Factor. Observations.
 #' @param y Required. Factor. Factor to stratify by.
 #' @param parametric Optional. Logical. Indicates parametric testing should be used.
-#' Defaults to FALSE (non-parametric). See note below detailing statistical testing.
-#' @param digits Optional. Integer. Number of digits to round to. Defaults to 1.
+#' See note detailing statistical tests.
+#' @param digits Optional. Integer. Number of digits to round to.
 #' @param p.digits Optional. Integer. Number of p-value digits to print. Note that
-#' p-values are still rounded using 'digits'. Defaults to 4.
+#' p-values are still rounded using 'digits'.
+#' @return Character. Formatted p-value.
 #' @note Statistical testing used is dependent on type of 'x' data, number of
 #' levels in the factor 'y', and whether parametric/non-parametric testing is
 #' selected. For continuous 'x' data, parametric testing is Student's t-test
@@ -17,7 +19,6 @@
 #' (x, 2 lvls) and without (x, >2 lvls) Monte Carlo simulation. Non-parametric
 #' testing is the Fisher's exact test with (x, 2 lvls) and without (x, >2 lvls)
 #' Monte Carlo simulation.
-#' @return Character. Formatted p-value.
 #' @examples
 #' # Numeric data
 #' test_hypothesis(mtcars$mpg, as.factor(mtcars$gear))
@@ -41,7 +42,7 @@ test_hypothesis.default <- function (x, y, parametric, digits, p.digits) as.char
 # Numeric testing methods
 #' @export
 test_hypothesis.numeric <- function(x = NA, y = NA, parametric = FALSE, digits = 1, p.digits = 4) {
-  unique_lvl <- length(unique(y[!is.na(x)]))
+  unique_lvl <- length(stats::na.omit(unique(y[!is.na(x)])))
   if (is.factor(y) & unique_lvl >= 2) {
     pv <- if (unique_lvl == 2)
       if (parametric) stats::t.test(formula = x ~ y, alternative = 'two.sided')$p.value
@@ -49,7 +50,7 @@ test_hypothesis.numeric <- function(x = NA, y = NA, parametric = FALSE, digits =
     else if (parametric) summary(stats::aov(x ~ y))[[1]][[1,"Pr(>F)"]]
     else stats::kruskal.test(x ~ y)$p.value
     format.pval(pv = pv, digits = digits, eps = 0.0001, nsmall = p.digits, scientific = F)
-  } else NA
+  } else as.character(NA)
 }
 
 
@@ -74,7 +75,7 @@ test_hypothesis.factor <- function(x = NA, y = NA, parametric = FALSE, digits = 
         stats::fisher.test(x, y, simulate.p.value = TRUE)$p.value
       }
     format.pval(pv = pv, digits = digits, eps = 1e-04, nsmall = p.digits, scientific = F)
-  } else NA
+  } else as.character(NA)
 }
 
 #' @export

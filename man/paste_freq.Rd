@@ -2,27 +2,31 @@
 % Please edit documentation in R/paste.R
 \name{paste_freq}
 \alias{paste_freq}
-\title{Paste Frequency}
+\title{Paste frequency}
 \usage{
-paste_freq(num = NA, den = NA, percent.sign = TRUE, digits = 1)
+paste_freq(x, y, na.rm = TRUE, percent.sign = TRUE, digits = 1)
 }
 \arguments{
-\item{num}{Optional. Tibble, Numeric, or Non-Numeric. The numerator.
-Tibbles and non-numeric data are automatically tallied (nrow or length).}
+\item{x}{Data.frame, numeric, or non-numeric. The numerator.}
 
-\item{den}{Optional. Tibble, Numeric, or Non-Numeric. The denominator.
-Tibbles and non-numeric data are automatically tallied (nrow or length). May use
-a single denominator for multiple numerators or one denominator for each
+\item{y}{Data.frame, numeric, or non-numeric. The denominator. A single
+denominator may be used for multiple numerators or one denominator for each
 numerator.}
 
-\item{percent.sign}{Optional. Logical. Indicates percent sign should be printed
-for frequencies. Defaults to TRUE.}
+\item{na.rm}{Logical. Whether to ignore NA's when tallying non-numeric data.}
 
-\item{digits}{Optional. Integer. Number of digits to round to. Defaults to 1.}
+\item{percent.sign}{Logical. Indicates percent sign should be printed
+with frequencies.}
+
+\item{digits}{Integer. Number of digits to round to.}
+}
+\value{
+A character vector of count(s) with frequencies.
 }
 \description{
-Returns a human-readable frequency from count(able) data. Supports
-vectorized data (i.e. dplyr::mutate()).
+Creates a human-readable frequency from count(able) data. Automatically
+tallies non-numeric data types (nrow or length) and supports vectorized data
+methods.
 }
 \examples{
 library(tibble)

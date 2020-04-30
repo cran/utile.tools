@@ -2,7 +2,7 @@
 % Please edit documentation in R/chunk.R
 \name{chunk_data_}
 \alias{chunk_data_}
-\title{Break a data object into chunks}
+\title{Break data into chunks}
 \usage{
 chunk_data_(data = NULL, size = 10, reverse = FALSE)
 }
@@ -10,10 +10,9 @@ chunk_data_(data = NULL, size = 10, reverse = FALSE)
 \item{data}{Required. Tibble, data frame, vector.}
 
 \item{size}{Optional. Integer. The number of items (e.g. rows in a tibble)
-that make up a given chunk. Must be a positive integer. Defaults to 10.}
+that make up a given chunk. Must be a positive integer.}
 
-\item{reverse}{Optional. Logical. Calculate chunks from back to front.
-Defaults to front to back order.}
+\item{reverse}{Optional. Logical. Calculate chunks from back to front.}
 }
 \value{
 A factory function which returns a chunk of data from the provided
