@@ -1,3 +1,12 @@
+# utile.tools 0.2.6
+* The final tabulate function, `tabulate_at_risk`, has been removed after being internalized by `utile.visuals` package.
+* Unused `dplyr` dependency removed.
+* `vctrs` dependency added.
+* Fixed incorrect estimate rounding in <1 checks for `paste_median` and `paste_mean`.
+* Fixed issue where `test_hypothesis` would not accept logical stratification data.
+* Added more reliable type checking and recycling to `calc_duration`.
+* All functions now use a consistent x/y argument style.
+
 # utile.tools 0.2.5
 * Added `paste()` & `paste0()`. Base functions with added option for NA removal. Default behavior identical to base functions.
 * Removed `tabulate_model()`. Feature parity has been provided in `utile.tables::build_table()`.

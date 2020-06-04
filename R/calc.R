@@ -2,56 +2,70 @@
 #' @description
 #' Calculates the duration of time between two provided date objects.
 #' Supports vectorized data (i.e. \code{\link[dplyr:mutate]{dplyr::mutate()}}).
-#' @param start Required. Date or POSIXt object. The start date/timestamp.
-#' @param end Required. Date or POSIXt object. The end date/timestamp.
-#' @param units Optional. Character. Units of the returned duration
+#' @param x A date or datetime. The start date(s)/timestamp(s).
+#' @param y A date or datetime. The end date(s)/timestamp(s).
+#' @param units A character. Units of the returned duration
 #' (i.e. 'seconds', 'days', 'years').
 #' @return If 'units' specified, returns numeric. If 'units' unspecified,
 #' returns an object of class '\code{\link[lubridate:Duration-class]{Duration}}'.
 #' @note Supports multiple calculations against a single time point (i.e.
 #' multiple start dates with a single end date). Note that start and end
 #' must otherwise be of the same length.
+#'
+#' When the start and end dates are of different types (i.e. x = date,
+#' y = datetime), a lossy cast will be performed which strips the datetime data
+#' of its time components. This is done to avoid an assumption of more time
+#' passing that would otherwise come with casting the date data to datetime.
 #' @examples
-#' # Timestamps
+#' library(lubridate)
+#' library(purrr)
+#'
+#' # Dates -> duration in years
 #' calc_duration(
-#'    start = as.POSIXct('01/01/1999 10:00', format = '%m/%d/%Y %H:%M'),
-#'    end = as.POSIXct('01/01/2001 00:00', format = '%m/%d/%Y %H:%M'),
-#'    units = 'days'
+#'   x = mdy(map_chr(sample(1:9, 5), ~ paste0('01/01/199', .x))),
+#'   y = mdy(map_chr(sample(1:9, 5), ~ paste0('01/01/200', .x))),
+#'   units = 'years'
 #' )
 #'
-#' # Dates
+#' # datetimes -> durations
 #' calc_duration(
-#'    start = as.Date('01/01/1999', format = '%m/%d/%Y'),
-#'    end = as.Date('01/01/2001', format = '%m/%d/%Y'),
-#'    units = 'years'
+#'   x = mdy_hm(map_chr(sample(1:9, 5), ~ paste0('01/01/199', .x, ' 1', .x, ':00'))),
+#'   y = mdy_hm(map_chr(sample(1:9, 5), ~ paste0('01/01/200', .x, ' 0', .x, ':00')))
+#' )
+#'
+#' # Mixed date classes -> durations
+#' calc_duration(
+#'   x = mdy(map_chr(sample(1:9, 5), ~ paste0('01/01/199', .x))),
+#'   y = mdy_hm(map_chr(sample(1:9, 5), ~ paste0('01/01/200', .x, ' 0', .x, ':00')))
 #' )
 #' @export
-calc_duration <- function(start = NA, end = NA, units = NA) {
+calc_duration <- function(x, y, units = NULL) {
 
-  # Hard Stops
+  # Input type check
   if (
-    !(all(lubridate::is.Date(start), na.rm = TRUE) | all(lubridate::is.POSIXt(start), na.rm = TRUE)) |
-    !(all(lubridate::is.Date(end), na.rm = TRUE) | all(lubridate::is.POSIXt(end), na.rm = TRUE))
-  ) stop('Missing Date or POSIXt object. Check: [\'start\', \'end\']')
-  if (length(start) != length(end) & length(start) > 1 & length(end) > 1)
-    stop('Provided data are not of the same length. Check [\'start\', \'end\']')
+    !all(lubridate::is.timepoint(x), na.rm = TRUE) |
+    !all(lubridate::is.timepoint(y), na.rm = TRUE)
+  ) {
+    stop('\'x\' and/or \'y\' not <date> or <datetime>.')
+  }
 
-  # Handle multiple calculations off single timepoint
-  if (length(start) == 1 & length(end) > 1) start <- rep(start, times = length(end))
-  if (length(end) == 1 & length(start) > 1) end <- rep(end, times = length(start))
+  # Recycle single timepoint or throw error for mismatched sizes
+  common_dates <- vctrs::vec_recycle_common(x = x, y = y)
 
-  # Ignore timestamp if one variable is a Date object
-  if (all(lubridate::is.Date(end), na.rm = TRUE) & all(lubridate::is.POSIXt(start), na.rm = TRUE))
-    start <- as.Date(start)
-  if (all(lubridate::is.Date(start), na.rm = TRUE) & all(lubridate::is.POSIXt(end), na.rm = TRUE))
-    end <- as.Date(end)
+  # Remove timestamp if one variable is a Date object
+  if (any(class(x) != class(y), na.rm = TRUE)) {
+    common_dates <- vctrs::allow_lossy_cast(
+      purrr::map(common_dates, vctrs::vec_cast, to = vctrs::new_date())
+    )
+  }
 
   # Calculate duration
-  duration <- lubridate::as.duration(lubridate::interval(start, end))
+  duration <- lubridate::as.duration(lubridate::interval(x, y))
 
-  # Return data with appropriate type
-  if (!is.na(units)) as.numeric(duration, units)
+  # Return data as appropriate type
+  if (!is.null(units)) as.numeric(duration, units)
   else duration
+
 }
 
 
@@ -59,11 +73,11 @@ calc_duration <- function(start = NA, end = NA, units = NA) {
 #' @description
 #' Calculates chunk indices of a data object
 #' for a given chunk size (number of items per chunk).
-#' @param data Required. Tibble, data frame, vector.
-#' @param size Optional. Integer. The number of items (e.g. rows in a tibble)
+#' @param x A data frame or vector.
+#' @param size An integer. The number of items (e.g. rows in a tibble)
 #' that make up a given chunk. Must be a positive integer. Caps out at data
 #' maximum.
-#' @param reverse Optional. Logical. Calculate chunks from back to front.
+#' @param reverse A logical. Calculate chunks from back to front.
 #' @return An iterable list of row indices for each chunk of data.
 #' @examples
 #' # Create chunk map for a data frame
@@ -72,18 +86,16 @@ calc_duration <- function(start = NA, end = NA, units = NA) {
 #' # Iterate through chunks of data
 #' for (chunk in chunks) print(paste0(rownames(mtcars[chunk,]), collapse = ', '))
 #' @export
-calc_chunks <- function(data = NULL, size = 10, reverse = FALSE) {
+calc_chunks <- function(x, size = 10, reverse = FALSE) {
 
   # Hard stops
-  if (is.null(data) | (!tibble::is_tibble(data) & !is.data.frame(data) & !is.vector(data)))
-    stop('Invalid data type provided. [check: \'data\']')
+  if (!is.data.frame(x) & !is.vector(x))
+    stop('\'x\' not a <data.frame> or vector.')
   if (!is.numeric(size) | size < 1)
-    stop('Invalid data type provided. [check: \'size\']')
+    stop('\'size\' not <numeric> or less than 1.')
 
   # Variables
-  item_cnt <-
-    if (tibble::is_tibble(data) | is.data.frame(data)) nrow(data)
-  else length(data)
+  item_cnt <- vctrs::vec_size(x)
   if (size > item_cnt) size <- item_cnt
 
   # Calculate and return chunks
