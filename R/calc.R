@@ -39,7 +39,7 @@
 #'   y = mdy_hm(map_chr(sample(1:9, 5), ~ paste0('01/01/200', .x, ' 0', .x, ':00')))
 #' )
 #' @export
-calc_duration <- function(x, y, units = NULL) {
+calc_duration <- function (x, y, units = NULL) {
 
   # Input type check
   if (
@@ -84,7 +84,7 @@ calc_duration <- function(x, y, units = NULL) {
 #' # Iterate through chunks of data
 #' for (chunk in chunks) print(paste0(rownames(mtcars[chunk,]), collapse = ', '))
 #' @export
-calc_chunks <- function(x, size = 10, reverse = FALSE) {
+calc_chunks <- function (x, size = 10, reverse = FALSE) {
 
   # Hard stops
   if (!is.data.frame(x) & !is.vector(x))
@@ -100,25 +100,4 @@ calc_chunks <- function(x, size = 10, reverse = FALSE) {
   if (!reverse) purrr::map(1:ceiling(item_cnt / size), ~ ((.x-1)*size+1):min(item_cnt, (.x*size)))
   else purrr::map(1:ceiling(item_cnt / size), ~ (item_cnt-(.x-1)*size):max(1, item_cnt-(.x*size)+1))
 
-}
-
-
-#' @title Calculate cumulative summation of vector
-#' @description
-#' Calculate the cumulative summation of a numeric vector with
-#' revised NA handling compared to `base::cumsum()`.
-#' @param x A numeric.
-#' @param na.fill A logical. Impute forward for NA values.
-#' @return A vector of the same length and type as x.
-#' @examples
-#' x <- 1:10
-#' x[3:4] <- NA
-#'
-#' # Calculate cumsum & replace NA values
-#' calc_cumsum(x, na.fill = TRUE)
-#' @export
-calc_cumsum <- function (x, na.fill = FALSE) {
-  x <- replace(x, !is.na(x), cumsum(x[!is.na(x)]))
-  if (na.fill) x <- c(NA, x[!is.na(x)])[cumsum(!is.na(x)) + 1]
-  x
 }

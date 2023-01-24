@@ -1,6 +1,6 @@
 #' @title Paste frequency
 #' @description
-#' Creates a human-readable frequency from count(able) data. Automatically
+#' Creates a formatted frequency from count(able) data. Automatically
 #' tallies non-numeric data types (nrow or length) and supports vectorized data
 #' methods.
 #' @param x A data.frame, numeric, or non-numeric. The numerator.
@@ -39,7 +39,7 @@ paste_freq <- function (x, y, na.rm = TRUE, percent.sign = TRUE, digits = 1) {
   purrr::pmap_chr(
     common_counts,
     ~ {
-      if (any(is.na(c(.x,.y))) | !any(is.numeric(c(.x,.y)))) as.character(NA)
+      if (any(is.na(c(.x,.y))) | !any(is.numeric(c(.x,.y)))) NA_character_
       else {
         paste0(
           .x,
@@ -57,7 +57,7 @@ paste_freq <- function (x, y, na.rm = TRUE, percent.sign = TRUE, digits = 1) {
 
 #' @title Paste median
 #' @description
-#' Creates a human-readable median with inter-quartile range from numeric data.
+#' Creates a formatted median with inter-quartile range from numeric data.
 #' @param x A numeric. Data to summarize.
 #' @param less.than.one A logical. Indicates a median that rounds to 0 should
 #' be printed as <1.
@@ -67,7 +67,7 @@ paste_freq <- function (x, y, na.rm = TRUE, percent.sign = TRUE, digits = 1) {
 #' paste_median(mtcars$mpg)
 #' @export
 paste_median <- function (x, less.than.one = FALSE, digits = 1) {
-  if (all(is.na(x)) | !all(is.numeric(x))) as.character(NA)
+  if (all(is.na(x)) | !all(is.numeric(x))) NA_character_
   else {
     estimate <- round(stats::median(x, na.rm = TRUE), digits = digits)
     precision <- round(
@@ -83,8 +83,7 @@ paste_median <- function (x, less.than.one = FALSE, digits = 1) {
 
 #' @title Paste mean
 #' @description
-#' Creates a human-readable mean with standard deviation
-#' from numeric data.
+#' Creates a formatted mean with standard deviation from numeric data.
 #' @param x A numeric. Data to summarize.
 #' @param less.than.one A logical. Indicates a mean that rounds to 0 should
 #' be printed as <1.
@@ -94,7 +93,7 @@ paste_median <- function (x, less.than.one = FALSE, digits = 1) {
 #' paste_mean(mtcars$mpg)
 #' @export
 paste_mean <- function (x, less.than.one = FALSE, digits = 1) {
-  if (all(is.na(x)) | !all(is.numeric(x))) as.character(NA)
+  if (all(is.na(x)) | !all(is.numeric(x))) NA_character_
   else {
     estimate <- round(mean(x, na.rm = TRUE), digits = digits)
     precision <- round(stats::sd(x, na.rm = TRUE), digits = digits)
@@ -108,7 +107,7 @@ paste_mean <- function (x, less.than.one = FALSE, digits = 1) {
 
 #' @title Paste event-free survival
 #' @description
-#' Creates a human-readable event-free-survival from a survfit object
+#' Creates a formatted event-free-survival from a survfit object
 #' and a specified time point.
 #' @param x A \code{\link[survival]{survfit}} object. The survival model.
 #' @param times A numeric. Indicates time-points of interest. Units are whatever
@@ -116,7 +115,7 @@ paste_mean <- function (x, less.than.one = FALSE, digits = 1) {
 #' @param percent.sign A logical. Indicates percent sign should be printed
 #' for frequencies.
 #' @param digits Integer. Number of digits to round to.
-#' @return A character vector of event free survival(s).
+#' @return A named character vector of event-free survival(s).
 #' @examples
 #' library(survival)
 #'
@@ -129,48 +128,66 @@ paste_efs <- function (x, times, percent.sign = TRUE, digits = 1) {
   } else if (!inherits(x, 'survfit') | !(x$type %in% c('right', 'left', 'interval'))) {
     stop('\'x\' not <survfit> or fit does not estimate survival.')
   } else {
-    results <- summary(x, times = times)
-    estimate <- round(results$surv * 100, digits = digits)
-    lower <- round(results$lower * 100, digits = digits)
-    upper <- round(results$upper * 100, digits = digits)
-    paste0(estimate, if (percent.sign) '%', ' [', lower, '-', upper, ']')
+    res <- summary(x, times = times)[c('surv', 'lower', 'upper')]
+    res <- purrr::map(res, ~ round(.x * 100, digits = digits))
+    res <- purrr::pmap_chr(
+      res,
+      \(surv, lower, upper) {
+        paste0(surv, if (percent.sign) '%', ' [', lower, '-', upper, ']')
+      }
+    )
+    stats::setNames(res, times)
   }
 }
+
+
+#' @title Paste p-value
+#' @description
+#' Creates a human-readable p.value using sensible defaults for `format.pval()`.
+#' @param x A numeric. P-value to format.
+#' @param digits A numeric. Number of significant digits to round to.
+#' @param p.digits A numeric. Minimum number of digits to right of the decimal
+#' point.
+#' @examples
+#' paste_pval(0.061126e-10)
+#' @export
+paste_pval <- function (x, digits = 1, p.digits = 4) {
+  format.pval(pv = x,
+              digits = digits,
+              eps = 1e-04,
+              nsmall = p.digits,
+              scientific = F)
+}
+
 
 #' @name paste
 #' @title Concatenate strings
 #' @description
-#' An augmented version of \code{\link[base:paste]{base::paste()}} with options to
-#' manage NA values.
+#' An augmented version of \code{\link[base:paste]{base::paste()}} with options
+#' to manage `NA` values.
 #' @param ... R objects to be converted to character vectors.
 #' @param sep A character. A string to separate the terms.
 #' @param collapse A character. An string to separate the results.
 #' @param na.rm A logical. Whether to remove NA values from 'x'.
-#' Note that NA values are also removed from vectors.
-#' @details The \code{\link[base:paste]{base::paste()}} function is intentionally
-#' designed to coarce NA values to characters that appear in the concatenated
-#' character output. This behavior is not always desirable (i.e. when programatically
-#' calling paste) and there is currently no means of opting out of this behavior.
-#' These augmented functions address this deficit.
 #' @return Character vector of concatenated values.
 #' @seealso \code{\link[base]{paste}}
 #' @examples
 #' # Base paste() NA handling behavior
 #' paste(
-#'   'The', c('red', NA, 'orange'), 'fox jumped', NA, 'over the fence.',
+#'   'The', c('red', NA_character_, 'orange'), 'fox jumped', NA_character_, 'over the fence.',
 #'   collapse = ' '
 #' )
 #'
 #' # Removal of NA values
 #' paste(
-#'   'The', c('red', NA, 'orange'), 'fox jumped', NA, 'over the fence.',
+#'   'The', c('red', NA_character_, 'orange'), 'fox jumped', NA_character_, 'over the fence.',
 #'   collapse = ' ',
 #'   na.rm = TRUE
 #' )
 
 #' @rdname paste
 #' @export
-paste <- function(..., sep = ' ', collapse = NULL, na.rm = FALSE) {
+paste <- function (..., sep = ' ', collapse = NULL, na.rm = FALSE) {
   x <- list(..., sep = sep, collapse = collapse)
   if (na.rm) x <- purrr::map(x[!is.na(x)], ~ .x[!is.na(.x)])
   do.call(base::paste, x)
@@ -178,7 +195,7 @@ paste <- function(..., sep = ' ', collapse = NULL, na.rm = FALSE) {
 
 #' @rdname paste
 #' @export
-paste0 <- function(..., collapse = NULL, na.rm = FALSE) {
+paste0 <- function (..., collapse = NULL, na.rm = FALSE) {
   x <- list(..., collapse = collapse)
   if (na.rm) x <- purrr::map(x[!is.na(x)], ~ .x[!is.na(.x)])
   do.call(base::paste0, x)

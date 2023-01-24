@@ -2,48 +2,103 @@
 % Please edit documentation in R/test.R
 \name{test_hypothesis}
 \alias{test_hypothesis}
+\alias{test_hypothesis.numeric}
+\alias{test_hypothesis.factor}
+\alias{test_hypothesis.logical}
 \title{Test the null hypothesis}
 \usage{
-test_hypothesis(x, y, parametric, digits, p.digits)
+test_hypothesis(
+  x,
+  y,
+  test,
+  digits,
+  p.digits,
+  simulate.p.value,
+  B,
+  workspace,
+  ...
+)
+
+\method{test_hypothesis}{numeric}(
+  x,
+  y,
+  test = c("anova", "kruskal", "wilcoxon"),
+  digits = 1,
+  p.digits,
+  ...
+)
+
+\method{test_hypothesis}{factor}(
+  x,
+  y,
+  test = c("chisq", "fisher"),
+  digits = 1,
+  p.digits,
+  simulate.p.value = FALSE,
+  B = 2000,
+  workspace = 2e+07,
+  ...
+)
+
+\method{test_hypothesis}{logical}(
+  x,
+  y,
+  test = c("chisq", "fisher"),
+  digits = 1,
+  p.digits,
+  simulate.p.value = FALSE,
+  B = 2000,
+  workspace = 2e+07,
+  ...
+)
 }
 \arguments{
-\item{x}{A numeric or factor. Observations.}
+\item{x}{A numeric, factor, or logical. Observations.}
 
-\item{y}{A factor or logical. Categorical variable to stratify by.}
+\item{y}{A factor or logical. Categorical "by" grouping variable.}
 
-\item{parametric}{A logical. Indicates parametric testing should be used.
-See note detailing statistical tests. Defaults to FALSE.}
+\item{test}{A character. Name of the statistical test to use. See note.}
 
-\item{digits}{An integer. Number of digits to round to. Defaults to 1.}
+\item{digits}{An integer. Number of digits to round to.}
 
-\item{p.digits}{An integer. Number of p-value digits to print. Note that
-p-values are still rounded using 'digits'. Defaults to 4.}
+\item{p.digits}{An integer. The number of p-value digits to the right of
+the decimal point. Note that p-values are still rounded using 'digits'.}
+
+\item{simulate.p.value}{A logical. Whether p-values in nominal variable testing
+should be computed with Monte Carlo simulation.}
+
+\item{B}{An integer. Number of replicates to use in Monte Carlo simulation for
+nominal testing.}
+
+\item{workspace}{An integer. Size of the workspace used for the Fisher's Exact
+Test network algorithm.}
+
+\item{...}{Additional arguments passed to the appropriate S3 method.}
 }
 \value{
-A character formatted p-value.
+A list containing the statistical test performed, test statistic,
+and p-value.
 }
 \description{
-Produces a p-value from parametric or non-parametric testing of the
-null hypothesis for stratified data.
+Tests the null hypothesis that there is no difference between
+grouped data.
 }
 \note{
-Statistical testing used is dependent on type of 'x' data, number of
-levels in the factor 'y', and whether parametric/non-parametric testing is
-selected. For continuous 'x' data, parametric testing is Student's t-test
-(y, 2 lvls) or one-way ANOVA (y, >2 lvls). Non-parametric testing is
-Wilcoxon Rank Sum/Mann Whitney U (y, 2 lvls) or Kruskal Wallis (y, >2 lvls).
-For factor or logical 'x' data, "parametric" testing is Chi-squared with
-(x, 2 lvls) and without (x, >2 lvls) Monte Carlo simulation. Non-parametric
-testing is the Fisher's exact test with (x, 2 lvls) and without (x, >2 lvls)
-Monte Carlo simulation.
+Statistical testing used is dependent on type of 'x' data. Supported
+testing for numeric data includes ANOVA ('anova'), Kruskal-Wallis ('kruskal'),
+and Wilcoxon Rank Sum ('wilcoxon') tests. For categorical data, supported
+testings includes Pearson's Chi-squared ('chisq') and Fisher's Exact Test
+('fisher').
 }
 \examples{
+strata <- as.factor(mtcars$cyl)
+
 # Numeric data
-test_hypothesis(mtcars$mpg, as.factor(mtcars$gear))
+test_hypothesis(mtcars$mpg, strata)
 
 # Logical data
-test_hypothesis(as.logical(mtcars$vs), as.factor(mtcars$gear))
+test_hypothesis(as.logical(mtcars$vs), strata)
 
 # Factor data
-test_hypothesis(as.factor(mtcars$carb), as.factor(mtcars$gear))
+test_hypothesis(as.factor(mtcars$carb), strata)
 }

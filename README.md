@@ -3,22 +3,16 @@
 [![Total Downloads](https://cranlogs.r-pkg.org/badges/grand-total/utile.tools)](https://CRAN.R-project.org/package=utile.tools)
 
 ## Overview
-Tools for preparing and summarizing data for publication purposes. Includes functions for tabulating models, producing human-readable summary statistics from raw data, macros for calculating duration of time, and simplistic hypothesis testing tools.
+Convenience utilities for formatting and summarizing data for outcomes research.
 
-## Verbs
-### Paste
-- `paste()` & `paste0`: The base functions with an added 'na.rm' parameter for nested NA removal. Default function behavior is identical to base counterparts.
-- `paste_freq()`: Pastes a human-readable frequency from count(able) data. Handily has methods for several types of data.
-- `paste_median()`: Pastes a human-readable median with inter-quartile range from numeric data.
-- `paste_mean()`: Pastes a human-readable mean with standard deviation from numeric data.
-- `paste_efs()`: Pastes a human-readable event-free-survival from a survfit object and a specified time point.
+### paste_
+Functions such as `paste_freq()` and `paste_mean()`, which return formatted statistics for writing.
 
-### Calc
-- `calc_duration()`: Calculates the duration of time between two provided date objects. Essentially a macro of `lubridate::` functions with extra logic built in.
-- `calc_chunks()`: Calculates mapped "chunk" indices for a data object given a specified chunk size (e.g. number of rows in a tibble).
+### calc_
+Convenience functions for frequently used calculations, such as the duration of time between two date objects with `calc_duration()`.
 
-### Test
-- `test_hypothesis()`: Retrieves a p-value from null hypothesis testing of stratified continuous or categorical data. Provides parametric and non-parametric testing options (see docs).
+### cusum_
+Functions which take a dichotomous procedure outcome and return prepared data for producing CUSUM curves. Available options range from simple cumulative sum of failures with `cusum_failure()` to risk-adjusted sequential probability ratio tests with `cusum_sprt()`.
 
-### Chunk
-- `chunk_data_()`: Creates a factory function which returns chunks of a given data object (table, vector) with successive function calls.
+### test_
+Simple null hypothesis testing of stratified continuous or nominal data with the `test_hypothesis()` function. Returns a list containing test results.
